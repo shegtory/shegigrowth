@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ShegiGrowth</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #ffffff0f;
+    --accent: #00ff88;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --text: #f0f0f0;
+    --muted: #6b7280;
+    --danger: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* Ambient glow */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, #00ff8808 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 0 100px; }
+
+  /* Header */
+  .header {
+    padding: 24px 20px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: #0a0a0fee;
+    backdrop-filter: blur(20px);
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo-text {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--accent3);
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-item {
+    background: var(--bg);
+    padding: 16px;
+    text-align: center;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .stat-item:nth-child(2) { animation-delay: 0.05s; }
+  .stat-item:nth-child(3) { animation-delay: 0.1s; }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .stat-value.green { color: var(--accent); }
+  .stat-value.purple { color: #a78bfa; }
+  .stat-value.amber { color: var(--accent3); }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* Section */
+  .section { padding: 20px; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+  }
+
+  .section-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  /* Today's targets */
+  .targets-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+    padding: 0 20px;
+  }
+
+  /* Account Card */
+  .account-card {
+    margin: 0 20px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .account-card:nth-child(2) { animation-delay: 0.05s; }
+  .account-card:nth-child(3) { animation-delay: 0.1s; }
+  .account-card:nth-child(4) { animation-delay: 0.15s; }
+  .account-card:nth-child(5) { animation-delay: 0.2s; }
+
+  .account-card:active { transform: scale(0.98); }
+  .account-card:hover { border-color: #ffffff1a; }
+
+  /* Category stripe */
+  .card-stripe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    border-radius: 16px 0 0 16px;
+  }
+
+  .stripe-green { background: var(--accent); }
+  .stripe-purple { background: #7c3aed; }
+  .stripe-amber { background: var(--accent3); }
+  .stripe-blue { background: #3b82f6; }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding-left: 8px;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+  }
+
+  .card-info { flex: 1; min-width: 0; }
+
+  .card-name {
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-handle {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .category-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+  }
+
+  .tag-green { background: #00ff8815; color: var(--accent); }
+  .tag-purple { background: #7c3aed15; color: #a78bfa; }
+  .tag-amber { background: #f59e0b15; color: var(--accent3); }
+  .tag-blue { background: #3b82f615; color: #60a5fa; }
+
+  .card-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-left: 8px;
+  }
+
+  .metric { text-align: center; }
+
+  .metric-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .metric-lbl {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  .engagement-bar {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin-top: 10px;
+    margin-left: 8px;
+    overflow: hidden;
+  }
+
+  .engagement-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 1s ease;
+  }
+
+  .card-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-left: 8px;
+  }
+
+  .why-text {
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+    flex: 1;
+  }
+
+  .follow-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+
+  .follow-btn:active { transform: scale(0.95); opacity: 0.8; }
+
+  .follow-btn.done {
+    background: var(--surface2);
+    color: var(--muted);
+  }
+
+  /* Progress section */
+  .progress-section {
+    margin: 0 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    animation: fadeUp 0.6s ease both;
+    animation-delay: 0.3s;
+  }
+
+  .progress-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .progress-title span { color: var(--muted); font-weight: 400; font-size: 12px; }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .day-dot {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .day-dot.active { background: var(--accent); color: #000; font-weight: 700; }
+  .day-dot.partial { background: #00ff8840; color: var(--accent); }
+  .day-dot.today { border: 2px solid var(--accent); }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: #0a0a0fee;
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 8px 0 20px;
+    z-index: 10;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+
+  .nav-item.active { opacity: 1; }
+
+  .nav-icon { font-size: 20px; }
+
+  .nav-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+
+  .nav-item.active .nav-label { color: var(--accent); }
+
+  /* Refresh button */
+  .refresh-row {
+    padding: 16px 20px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .date-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+    display: inline-block;
+  }
+
+  /* Niche selector */
+  .niche-pills {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 0 20px 16px;
+    scrollbar-width: none;
+  }
+
+  .niche-pills::-webkit-scrollbar { display: none; }
+
+  .niche-pill {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .niche-pill.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+
+  /* Empty / loading state */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .checked { text-decoration: line-through; opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">📡</div>
+      <div class="logo-text">Shegi<span>Growth</span></div>
+    </div>
+    <div class="streak-badge">
+      🔥 <span id="streakCount">7</span> day streak
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-value green" id="followerCount">847</div>
+      <div class="stat-label">Followers</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value purple">+<span id="weeklyGain">34</span></div>
+      <div class="stat-label">This Week</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value amber"><span id="engRate">4.2</span>%</div>
+      <div class="stat-label">Eng. Rate</div>
+    </div>
+  </div>
+
+  <!-- Niche Pills -->
+  <div style="padding-top:16px;">
+    <div class="niche-pills">
+      <div class="niche-pill active">DeFi</div>
+      <div class="niche-pill">Solana</div>
+      <div class="niche-pill">NFT</div>
+      <div class="niche-pill">Layer 2</div>
+      <div class="niche-pill">Trading</div>
+      <div class="niche-pill">Web3 Dev</div>
+    </div>
+  </div>
+
+  <!-- Today's Targets -->
+  <div class="refresh-row">
+    <div class="date-label">
+      <span class="live-dot"></span>
+      &nbsp;TODAY'S TARGETS
+    </div>
+    <button class="refresh-btn" onclick="refreshTargets()">
+      ↻ Refresh
+    </button>
+  </div>
+
+  <!-- Account Cards -->
+  <div id="accountsList">
+
+    <!-- Card 1 — همسفر -->
+    <div class="account-card" onclick="toggleDone(this)">
+      <div class="card-stripe stripe-green"></div>
+      <div class="card-top">
+        <div class="avatar" style="background:#00ff8820;color:var(--accent)">AK</div>
+        <div class="card-info">
+          <div class="card-name">Alex Kim</div>
+          <div class="card-handle">@alexkim_defi</div>
+          <div class="category-tag tag-green">🌱 Fellow Traveler</div>
+        </div>
+      </div>
+      <div class="card-metrics">
+        <div class="metric">
+          <div class="metric-val">612</div>
+          <div class="metric-lbl">Followers</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" style="color:var(--accent)">9.4%</div>
+          <div class="metric-lbl">Engagement</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">Daily</div>
+          <div class="metric-lbl">Posts</div>
+        </div>
+      </div>
+      <div class="engagement-bar">
+        <div class="engagement-fill" style="width:94%"></div>
+      </div>
+      <div class="card-action">
+        <div class="why-text">Similar size, high engagement — grows with you</div>
+        <button class="follow-btn" onclick="markDone(event, this)">Follow</button>
+      </div>
+    </div>
+
+    <!-- Card 2 — یه پله بالاتر -->
+    <div class="account-card" onclick="toggleDone(this)">
+      <div class="card-stripe stripe-purple"></div>
+      <div class="card-top">
+        <div class="avatar" style="background:#7c3aed20;color:#a78bfa">MR</div>
+        <div class="card-info">
+          <div class="card-name">Maria Rodriguez</div>
+          <div class="card-handle">@maria_sol</div>
+          <div class="category-tag tag-purple">🎯 One Level Up</div>
+        </div>
+      </div>
+      <div class="card-metrics">
+        <div class="metric">
+          <div class="metric-val">1.8K</div>
+          <div class="metric-lbl">Followers</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" style="color:#a78bfa">6.1%</div>
+          <div class="metric-lbl">Engagement</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">Active</div>
+          <div class="metric-lbl">Status</div>
+        </div>
+      </div>
+      <div class="engagement-bar">
+        <div class="engagement-fill" style="width:61%;background:#7c3aed"></div>
+      </div>
+      <div class="card-action">
+        <div class="why-text">Reachable, their audience wants your content</div>
+        <button class="follow-btn" onclick="markDone(event, this)">Follow</button>
+      </div>
+    </div>
+
+    <!-- Card 3 — پنهان قوی -->
+    <div class="account-card" onclick="toggleDone(this)">
+      <div class="card-stripe stripe-amber"></div>
+      <div class="card-top">
+        <div class="avatar" style="background:#f59e0b20;color:var(--accent3)">DL</div>
+        <div class="card-info">
+          <div class="card-name">DeFi Lurker</div>
+          <div class="card-handle">@defilurker_eth</div>
+          <div class="category-tag tag-amber">💎 Hidden Gem</div>
+        </div>
+      </div>
+      <div class="card-metrics">
+        <div class="metric">
+          <div class="metric-val">290</div>
+          <div class="metric-lbl">Followers</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" style="color:var(--accent3)">18.7%</div>
+          <div class="metric-lbl">Engagement</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">3/day</div>
+          <div class="metric-lbl">Posts</div>
+        </div>
+      </div>
+      <div class="engagement-bar">
+        <div class="engagement-fill" style="width:100%;background:var(--accent3)"></div>
+      </div>
+      <div class="card-action">
+        <div class="why-text">Small but powerful — connect early</div>
+        <button class="follow-btn" onclick="markDone(event, this)">Follow</button>
+      </div>
+    </div>
+
+    <!-- Card 4 — یه پله بالاتر -->
+    <div class="account-card" onclick="toggleDone(this)">
+      <div class="card-stripe stripe-purple"></div>
+      <div class="card-top">
+        <div class="avatar" style="background:#7c3aed20;color:#a78bfa">CT</div>
+        <div class="card-info">
+          <div class="card-name">CryptoTyler</div>
+          <div class="card-handle">@cryptotyler_</div>
+          <div class="category-tag tag-purple">🎯 One Level Up</div>
+        </div>
+      </div>
+      <div class="card-metrics">
+        <div class="metric">
+          <div class="metric-val">2.3K</div>
+          <div class="metric-lbl">Followers</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" style="color:#a78bfa">5.8%</div>
+          <div class="metric-lbl">Engagement</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">Active</div>
+          <div class="metric-lbl">Status</div>
+        </div>
+      </div>
+      <div class="engagement-bar">
+        <div class="engagement-fill" style="width:58%;background:#7c3aed"></div>
+      </div>
+      <div class="card-action">
+        <div class="why-text">DeFi focus, audience overlaps with yours</div>
+        <button class="follow-btn" onclick="markDone(event, this)">Follow</button>
+      </div>
+    </div>
+
+    <!-- Card 5 — بزرگ niche -->
+    <div class="account-card" onclick="toggleDone(this)">
+      <div class="card-stripe stripe-blue"></div>
+      <div class="card-top">
+        <div class="avatar" style="background:#3b82f620;color:#60a5fa">BK</div>
+        <div class="card-info">
+          <div class="card-name">BlockKing</div>
+          <div class="card-handle">@blockking_eth</div>
+          <div class="category-tag tag-blue">👑 Niche Leader</div>
+        </div>
+      </div>
+      <div class="card-metrics">
+        <div class="metric">
+          <div class="metric-val">28K</div>
+          <div class="metric-lbl">Followers</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" style="color:#60a5fa">3.2%</div>
+          <div class="metric-lbl">Engagement</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val">Watch</div>
+          <div class="metric-lbl">Strategy</div>
+        </div>
+      </div>
+      <div class="engagement-bar">
+        <div class="engagement-fill" style="width:32%;background:#3b82f6"></div>
+      </div>
+      <div class="card-action">
+        <div class="why-text">Know your space — see what they post</div>
+        <button class="follow-btn" onclick="markDone(event, this)">Follow</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Weekly Progress -->
+  <div class="section">
+    <div class="progress-section">
+      <div class="progress-title">
+        Weekly Progress <span>— 5/7 days active</span>
+      </div>
+      <div class="week-grid">
+        <div class="day-dot active">M</div>
+        <div class="day-dot active">T</div>
+        <div class="day-dot active">W</div>
+        <div class="day-dot partial">T</div>
+        <div class="day-dot active">F</div>
+        <div class="day-dot today active">S</div>
+        <div class="day-dot">S</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item active">
+    <div class="nav-icon">📡</div>
+    <div class="nav-label">Targets</div>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">📈</div>
+    <div class="nav-label">Growth</div>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">🔍</div>
+    <div class="nav-label">Explore</div>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">⚙️</div>
+    <div class="nav-label">Settings</div>
+  </div>
+</div>
+
+<script>
+  // Niche pill selection
+  document.querySelectorAll('.niche-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.niche-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+    });
+  });
+
+  // Mark as done
+  function markDone(event, btn) {
+    event.stopPropagation();
+    if (btn.classList.contains('done')) {
+      btn.classList.remove('done');
+      btn.textContent = 'Follow';
+    } else {
+      btn.classList.add('done');
+      btn.textContent = '✓ Done';
+      // Small haptic feedback simulation
+      btn.style.transform = 'scale(0.9)';
+      setTimeout(() => btn.style.transform = '', 150);
+    }
+    updateDoneCount();
+  }
+
+  function updateDoneCount() {
+    const done = document.querySelectorAll('.follow-btn.done').length;
+    const total = document.querySelectorAll('.follow-btn').length;
+    if (done === total) {
+      setTimeout(() => {
+        alert('🎉 All done for today! Come back tomorrow for new targets.');
+      }, 300);
+    }
+  }
+
+  function toggleDone(card) {
+    // Just visual feedback on tap
+    card.style.opacity = '0.9';
+    setTimeout(() => card.style.opacity = '1', 100);
+  }
+
+  // Refresh animation
+  function refreshTargets() {
+    const btn = document.querySelector('.refresh-btn');
+    btn.style.transform = 'rotate(360deg)';
+    btn.style.transition = 'transform 0.5s ease';
+    setTimeout(() => {
+      btn.style.transform = '';
+      btn.style.transition = '';
+    }, 500);
+  }
+
+  // Nav switching
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+
+  // Animate engagement bars on load
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.engagement-fill').forEach((bar, i) => {
+      const width = bar.style.width;
+      bar.style.width = '0';
+      setTimeout(() => { bar.style.width = width; }, 300 + i * 100);
+    });
+  });
+
+  // Telegram WebApp integration
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand();
+    window.Telegram.WebApp.setHeaderColor('#0a0a0f');
+    window.Telegram.WebApp.setBackgroundColor('#0a0a0f');
+  }
+</script>
+</body>
+</html>
+
