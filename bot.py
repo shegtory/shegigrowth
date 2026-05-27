@@ -1,7 +1,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -36,12 +36,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     get_or_create_user(user.id)
 
+    keyboard = [[
+        InlineKeyboardButton(
+            "🚀 Open GrowthRadar",
+            web_app=WebAppInfo(url=WEBAPP_URL)
+        )
+    ]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     await update.message.reply_text(
         f"👋 Hey {user.first_name}!\n\n"
         "Welcome to *GrowthRadar* — your daily Twitter growth engine.\n\n"
         "To get started, tell me your Twitter handle:\n"
         "Example: `/setup @yourhandle`",
         parse_mode="Markdown",
+        reply_markup=reply_markup,
     )
 
 
@@ -172,6 +181,14 @@ async def show_targets(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_daily_targets(db_user.id, [t.id for t in targets])
 
+    keyboard = [[
+        InlineKeyboardButton(
+            "📱 Open in App",
+            web_app=WebAppInfo(url=WEBAPP_URL)
+        )
+    ]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     text = "🎯 *Today's Targets*\n\n"
     for t in targets:
         from models import CATEGORY_META
@@ -182,7 +199,7 @@ async def show_targets(update: Update, context: ContextTypes.DEFAULT_TYPE):
     streak = get_weekly_streak(db_user.id)
     text += f"\n🔥 Streak: *{streak} days*"
 
-    await update.message.reply_text(text, parse_mode="Markdown")
+    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
 
 
 # ── /stats ─────────────────────────────────────────────
