@@ -1,4 +1,4 @@
-﻿{
+{
   "version": 2,
   "builds": [
     {
@@ -10,14 +10,14 @@
       "use": "@vercel/static"
     }
   ],
-  "routes": [
-    { "src": "/api/webhook", "dest": "api/webhook.py" },
-    { "src": "/api/targets", "dest": "api/targets.py" },
-    { "src": "/api/stats", "dest": "api/stats.py" },
-    { "src": "/api/done", "dest": "api/done.py" },
-    { "src": "/api/cron", "dest": "api/cron.py" },
-    { "src": "/api/lookup", "dest": "api/lookup.py" },
-    { "src": "/", "dest": "static/index.html" }
+  "rewrites": [
+    { "source": "/api/webhook", "destination": "api/webhook.py" },
+    { "source": "/api/targets", "destination": "api/targets.py" },
+    { "source": "/api/stats", "destination": "api/stats.py" },
+    { "source": "/api/done", "destination": "api/done.py" },
+    { "source": "/api/cron", "destination": "api/cron.py" },
+    { "source": "/api/lookup", "destination": "api/lookup.py" },
+    { "source": "/", "destination": "static/index.html" }
   ],
   "crons": [
     {
