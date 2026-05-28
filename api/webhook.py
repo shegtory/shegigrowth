@@ -6,56 +6,45 @@ import httpx
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes
 from supabase import create_client
+import urllib.parse
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 WEBAPP_URL = os.environ.get("WEBAPP_URL")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-TWITTER_BEARER_TOKEN = os.environ.get("TWITTER_BEARER_TOKEN")
+TWITTER_CLIENT_ID = os.environ.get("TWITTER_CLIENT_ID")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-async def get_twitter_info(handle):
-    headers = {"Authorization": f"Bearer {TWITTER_BEARER_TOKEN}"}
-    async with httpx.AsyncClient() as client:
-        res = await client.get(
-            f"https://api.twitter.com/2/users/by/username/{handle}",
-            headers=headers,
-            params={"user.fields": "public_metrics,description"}
-        )
-    if res.status_code != 200:
-        return None
-    data = res.json().get("data", {})
-    metrics = data.get("public_metrics", {})
-    return {
-        "followers_count": metrics.get("followers_count", 0),
-        "following_count": metrics.get("following_count", 0),
-        "tweet_count": metrics.get("tweet_count", 0)
-    }
+def get_twitter_auth_url(telegram_id):
+    params = urllib.parse.urlencode({
+        "response_type": "code",
+        "client_id": TWITTER_CLIENT_ID,
+        "redirect_uri": f"{WEBAPP_URL}/api/callback",
+        "scope": "tweet.read users.read",
+        "state": str(telegram_id),
+        "code_challenge": "challenge",
+        "code_challenge_method": "plain"
+    })
+    return f"https://twitter.com/i/oauth2/authorize?{params}"
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     existing = supabase.table("users").select("*").eq("telegram_id", user.id).execute()
     if not existing.data:
         supabase.table("users").insert({"telegram_id": user.id}).execute()
-    keyboard = [[InlineKeyboardButton("Open App", web_app=WebAppInfo(url=WEBAPP_URL))]]
+    auth_url = get_twitter_auth_url(user.id)
+    keyboard = [
+        [InlineKeyboardButton("Connect Twitter", url=auth_url)],
+        [InlineKeyboardButton("Open App", web_app=WebAppInfo(url=WEBAPP_URL))]
+    ]
     await update.message.reply_text(
-        f"Welcome {user.first_name}!\nConnect your Twitter:\n/setup @handle",
+        f"Welcome {user.first_name}!\nConnect your Twitter account to get started.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 async def setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Usage: /setup @handle")
-        return
-    handle = context.args[0].replace("@", "")
-    telegram_id = update.effective_user.id
-    await update.message.reply_text(f"Fetching Twitter info for @{handle}...")
-    info = await get_twitter_info(handle)
-    if not info:
-        await update.message.reply_text("Could not find Twitter account. Check the handle and try again.")
-        return
-    supabase.table("users").update({
-        "twitter_handle": handle,
-        "follower_count": info["followers_count"]
-    }).eq("telegram_id", telegram_id).execute()
+    user = update.effective_user
+    auth_url = get_twitter_auth_url(user.id)
+    keyboard = [[InlineKeyboardButton("Connect Twitter", url=auth_url)]]
     await update.message.reply_text(
-        f"Connected @{handle}!\nFollowers: {info['followers_count']}\nFollowing: {info['following_count']}\nTweets: {info['tweet_count']}"
+        "Click below to connect your Twitter account:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 async def targets(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("Open App", web_app=WebAppInfo(url=WEBAPP_URL))]]
@@ -66,7 +55,10 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Please use /start first")
         return
     u = user.data[0]
-    await update.message.reply_text(f"Followers: {u.get('follower_count', 0)}\nStreak: {u.get('streak', 0)} days")
+    handle = u.get("twitter_handle", "not connected")
+    await update.message.reply_text(
+        f"@{handle}\nFollowers: {u.get('follower_count', 0)}\nStreak: {u.get('streak', 0)} days"
+    )
 async def process(body):
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
