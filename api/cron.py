@@ -1,16 +1,21 @@
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 def handler(request):
+    import asyncio
     from dotenv import load_dotenv
     from telegram import Bot
     from database import get_all_active_users, get_targets_for_user, save_daily_targets, get_weekly_streak
     from models import CATEGORY_META
-    import asyncio
+
     load_dotenv()
+
     secret = request.args.get("secret")
     if secret != os.getenv("CRON_SECRET"):
         return {"error": "unauthorized"}, 401
+
     async def send_daily():
         bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
         users = get_all_active_users()
@@ -30,5 +35,6 @@ def handler(request):
                 await bot.send_message(chat_id=user.telegram_id, text=text, parse_mode="Markdown")
             except Exception as e:
                 print(f"Failed to send to {user.telegram_id}: {e}")
+
     asyncio.run(send_daily())
     return {"status": "sent"}
