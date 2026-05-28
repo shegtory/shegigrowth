@@ -1,18 +1,22 @@
-import json
+import os
 import asyncio
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Application
-from bot import build_app
+
 load_dotenv()
-app = build_app()
-async def process_update(update_data):
-    await app.initialize()
-    update = Update.de_json(update_data, app.bot)
-    await app.process_update(update)
+
 def handler(request):
+    from telegram.ext import Application
+    from bot import build_app
+    import asyncio
+
     if request.method == "POST":
-        update_data = request.json
-        asyncio.run(process_update(update_data))
+        async def process():
+            app = build_app()
+            await app.initialize()
+            update = Update.de_json(request.json, app.bot)
+            await app.process_update(update)
+            await app.shutdown()
+        asyncio.run(process())
         return {"status": "ok"}
     return {"status": "ok"}
