@@ -1,11 +1,31 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/webhook.py", "use": "@vercel/python" },
-    { "src": "api/targets.py", "use": "@vercel/python" },
-    { "src": "api/stats.py", "use": "@vercel/python" },
-    { "src": "api/done.py", "use": "@vercel/python" },
-    { "src": "api/cron.py", "use": "@vercel/python" },
+    {
+      "src": "api/webhook.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": ["api/**"] }
+    },
+    {
+      "src": "api/targets.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": ["api/**"] }
+    },
+    {
+      "src": "api/stats.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": ["api/**"] }
+    },
+    {
+      "src": "api/done.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": ["api/**"] }
+    },
+    {
+      "src": "api/cron.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": ["api/**"] }
+    },
     { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
