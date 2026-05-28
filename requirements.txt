@@ -1,9 +1,0 @@
-python-telegram-bot==22.7
-sqlalchemy
-psycopg2-binary
-python-dotenv
-apscheduler
-requests
-httpx
-fastapi
-mangum
