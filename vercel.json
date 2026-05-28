@@ -1,23 +1,18 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/*.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "static/index.html",
-      "use": "@vercel/static"
+  "functions": {
+    "api/*.py": {
+      "runtime": "vercel-python@4.3.0"
     }
-  ],
+  },
   "rewrites": [
-    { "source": "/api/webhook", "destination": "api/webhook.py" },
-    { "source": "/api/targets", "destination": "api/targets.py" },
-    { "source": "/api/stats", "destination": "api/stats.py" },
-    { "source": "/api/done", "destination": "api/done.py" },
-    { "source": "/api/cron", "destination": "api/cron.py" },
-    { "source": "/api/lookup", "destination": "api/lookup.py" },
-    { "source": "/", "destination": "static/index.html" }
+    { "source": "/api/webhook", "destination": "/api/webhook.py" },
+    { "source": "/api/targets", "destination": "/api/targets.py" },
+    { "source": "/api/stats", "destination": "/api/stats.py" },
+    { "source": "/api/done", "destination": "/api/done.py" },
+    { "source": "/api/cron", "destination": "/api/cron.py" },
+    { "source": "/api/lookup", "destination": "/api/lookup.py" },
+    { "source": "/", "destination": "/static/index.html" }
   ],
   "crons": [
     {
