@@ -1,10 +1,13 @@
 {
   "version": 2,
-  "functions": {
-    "api/*.py": {
-      "runtime": "@vercel/python@4.3.0"
-    }
-  },
+  "builds": [
+    { "src": "api/webhook.py", "use": "@vercel/python" },
+    { "src": "api/targets.py", "use": "@vercel/python" },
+    { "src": "api/stats.py", "use": "@vercel/python" },
+    { "src": "api/done.py", "use": "@vercel/python" },
+    { "src": "api/cron.py", "use": "@vercel/python" },
+    { "src": "index.html", "use": "@vercel/static" }
+  ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
