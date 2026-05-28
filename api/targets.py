@@ -1,5 +1,3 @@
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_or_create_user, get_targets_for_user, save_daily_targets
 from models import CATEGORY_META
 def handler(request):

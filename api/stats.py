@@ -1,5 +1,3 @@
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_or_create_user, get_weekly_streak, get_weekly_growth
 def handler(request):
     telegram_id = request.args.get("telegram_id")
