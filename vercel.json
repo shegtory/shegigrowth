@@ -1,22 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/*.py",
-      "use": "@vercel/python",
-      "config": {
-        "includeFiles": [
-          "database.py",
-          "models.py",
-          "bot.py",
-          "classifier.py",
-          "twitter.py",
-          "scheduler.py"
-        ]
-      }
-    },
-    { "src": "index.html", "use": "@vercel/static" }
-  ],
+  "functions": {
+    "api/*.py": {
+      "runtime": "vercel-python@3.0.7"
+    }
+  },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
